@@ -9,8 +9,8 @@ test "version" {
     const version = nats.getVersion();
     const vernum = nats.getVersionNumber();
 
-    try std.testing.expectEqualStrings("3.9.1", version);
-    try std.testing.expectEqual(@as(u32, 0x03_09_01), vernum);
+    try std.testing.expectEqualStrings("3.9.3", version);
+    try std.testing.expectEqual(@as(u32, 0x03_09_03), vernum);
     try std.testing.expect(nats.checkCompatibility());
 }
 

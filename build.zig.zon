@@ -11,8 +11,8 @@
     },
     .dependencies = .{
         .nats_c = .{
-            .url = "git+https://github.com/allyourcodebase/nats.c.git?ref=3.9.1+1#6e6c26f0ebb63ca55913f5a60c9c762cb598b117",
-            .hash = "nats_c-3.9.1-0V8jnIpSAABnRZjGhKu7GzOKPWzb-JB35jspoD_AfLvm",
+            .url = "git+https://github.com/allyourcodebase/nats.c.git?ref=3.9.3#81a546c524f7c3db16606b85b5d729b393d8667e",
+            .hash = "nats_c-3.9.3-0V8jnNdSAACkcRB0PdrHECfsTXSiySA6OeAOx1e83iaM",
         },
     },
 }
