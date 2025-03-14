@@ -51,7 +51,7 @@ pub fn checkUserDataType(comptime T: type) void {
             else => checkUserDataType(info.child),
         },
         pointer => |info| switch (info.size) {
-            .Slice => @compileError(
+            .slice => @compileError(
                 "nats callbacks can only accept void or an (optional) single, many," ++
                     " or c pointer as userdata, not slices. \"" ++
                     @typeName(T) ++ "\" appears to be a slice.",

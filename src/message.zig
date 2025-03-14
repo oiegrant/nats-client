@@ -68,7 +68,7 @@ pub const Message = opaque {
     }
 
     pub fn getHeaderValue(self: *Message, key: [:0]const u8) Error![:0]const u8 {
-        var value: ?[*:0]u8 = null;
+        var value: [*c]const u8 = null;
         const status = Status.fromInt(nats_c.natsMsgHeader_Get(@ptrCast(self), key.ptr, &value));
 
         return status.toError() orelse std.mem.sliceTo(value.?, 0);

@@ -21,11 +21,11 @@ The standard workflows around publishing and subscribing to messages seem to wor
 
 # Zig Version Support
 
-Since the language is still under active development, any written Zig code is a moving target. The master branch targets zig `0.12`, `0.13`, and `0.14-dev` (though it is not guaranteed to work with all versions. Check the commit history for specific version updates).
+Since the language is still under active development, any written Zig code is a moving target. The master branch targets zig `0.14`.
 
 # Using
 
-These bindings are ready-to-use with the Zig package manager. With Zig 0.13, this means you will need to create a `build.zig.zon` and modify your `build.zig` to use the dependency.
+These bindings are ready-to-use with the Zig package manager. This means you will need to create a `build.zig.zon` and modify your `build.zig` to use the dependency.
 
 ```sh
 # bootstrap your zig project if you haven't already
