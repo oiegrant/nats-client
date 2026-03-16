@@ -23,6 +23,7 @@ const nats_c = @import("./nats_c.zig").nats_c;
 const Status = @import("./error.zig").Status;
 const Error = @import("./error.zig").Error;
 const Connection = @import("./connection.zig").Connection;
+const msg_ = @import("./message.zig");
 
 // ── Stream configuration ───────────────────────────────────────────────────
 
@@ -179,5 +180,97 @@ pub const JetStream = opaque {
             null,
         ));
         return status.raise();
+    }
+
+    // ── Pull consumers ───────────────────────────────────────────────────
+
+    /// Create a durable pull subscription on `subject` with the given
+    /// `durable` consumer name.  Uses default options (DeliverAll policy,
+    /// ExplicitAck).
+    ///
+    /// Caller owns the returned `*JsSubscription` and must call
+    /// `destroy()` when done.
+    pub fn pullSubscribe(
+        self: *JetStream,
+        subject: [:0]const u8,
+        durable: [:0]const u8,
+    ) Error!*JsSubscription {
+        var sub: *JsSubscription = undefined;
+        var err_code: nats_c.jsErrCode = 0;
+        const status = Status.fromInt(nats_c.js_PullSubscribe(
+            @ptrCast(&sub),
+            @ptrCast(self),
+            subject.ptr,
+            durable.ptr,
+            null, // jsOptions — defaults
+            null, // jsSubOptions — defaults (DeliverAll, ExplicitAck)
+            &err_code,
+        ));
+        return status.toError() orelse sub;
+    }
+};
+
+// ── Pull subscription ──────────────────────────────────────────────────────
+
+/// An opaque handle to a JetStream pull subscription.
+/// Destroy with `destroy()` when done.
+pub const JsSubscription = opaque {
+    pub fn destroy(self: *JsSubscription) void {
+        nats_c.natsSubscription_Destroy(@ptrCast(self));
+    }
+
+    /// Fetch up to `batch` messages, waiting up to `timeout_ms` milliseconds.
+    /// Returns a `FetchedMsgs` even on `.timeout` (partial batch is normal).
+    /// The caller must call `FetchedMsgs.deinit()` to ack and free messages.
+    pub fn fetch(
+        self: *JsSubscription,
+        batch: c_int,
+        timeout_ms: i64,
+    ) Error!FetchedMsgs {
+        var list: nats_c.natsMsgList = .{ .Msgs = null, .Count = 0 };
+        var err_code: nats_c.jsErrCode = 0;
+        const status = Status.fromInt(nats_c.natsSubscription_Fetch(
+            &list,
+            @ptrCast(self),
+            batch,
+            timeout_ms,
+            &err_code,
+        ));
+        // Timeout with a partial batch is normal — treat it as success.
+        if (status == .okay or status == .timeout) return FetchedMsgs{ .list = list };
+        try status.raise();
+        unreachable;
+    }
+};
+
+// ── Fetched message batch ──────────────────────────────────────────────────
+
+/// Owns a batch of JetStream messages returned by `JsSubscription.fetch()`.
+/// Call `deinit()` to ack all messages and free C memory.
+pub const FetchedMsgs = struct {
+    list: nats_c.natsMsgList,
+
+    pub fn count(self: FetchedMsgs) usize {
+        return @intCast(self.list.Count);
+    }
+
+    /// Return the i-th message.  Valid while `deinit()` has not been called.
+    pub fn get(self: FetchedMsgs, i: usize) *msg_.Message {
+        return @ptrCast(self.list.Msgs.?[i]);
+    }
+
+    /// Acknowledge all messages and free C-owned memory.
+    /// Safe to call on a zero-count batch.
+    pub fn deinit(self: *FetchedMsgs) void {
+        if (self.list.Count == 0 or self.list.Msgs == null) return;
+        var i: usize = 0;
+        while (i < @as(usize, @intCast(self.list.Count))) : (i += 1) {
+            _ = nats_c.natsMsg_Ack(self.list.Msgs.?[i], null);
+        }
+        // natsMsgList_Destroy calls natsMsg_Destroy on each message and
+        // frees the Msgs pointer array, but does NOT free the struct itself
+        // (it is stack-allocated in our FetchedMsgs.list field).
+        nats_c.natsMsgList_Destroy(&self.list);
+        self.list = .{ .Msgs = null, .Count = 0 };
     }
 };

@@ -37,6 +37,8 @@ pub const Statistics = sta_.Statistics;
 pub const StatsCounts = sta_.StatsCounts;
 
 pub const JetStream = js_.JetStream;
+pub const JsSubscription = js_.JsSubscription;
+pub const FetchedMsgs = js_.FetchedMsgs;
 pub const StreamConfig = js_.StreamConfig;
 pub const RetentionPolicy = js_.RetentionPolicy;
 pub const StorageType = js_.StorageType;

@@ -57,6 +57,16 @@ pub const Message = opaque {
         return @intCast(nats_c.natsMsg_GetDataLength(@ptrCast(self)));
     }
 
+    /// Return message payload as a byte slice.  Unlike `getData`, this does
+    /// not assume null-termination and is safe for binary or JSON payloads
+    /// received from JetStream (which are NOT null-terminated).
+    pub fn getDataBytes(self: *Message) []const u8 {
+        const ptr = nats_c.natsMsg_GetData(@ptrCast(self));
+        const len: usize = @intCast(nats_c.natsMsg_GetDataLength(@ptrCast(self)));
+        if (ptr == null or len == 0) return &.{};
+        return @as([*]const u8, @ptrCast(ptr))[0..len];
+    }
+
     pub fn setHeaderValue(self: *Message, key: [:0]const u8, value: [:0]const u8) Error!void {
         const status = Status.fromInt(nats_c.natsMsgHeader_Set(@ptrCast(self), key.ptr, value.ptr));
         return status.raise();
