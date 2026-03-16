@@ -94,8 +94,10 @@ pub const JetStream = opaque {
         _ = nats_c.jsStreamConfig_Init(&c_cfg);
 
         c_cfg.Name = cfg.name;
-        // subjects.ptr is [*]const [*:0]const u8 — same ABI as const char**
-        c_cfg.Subjects = @ptrCast(cfg.subjects.ptr);
+        // subjects.ptr is [*]const [*:0]const u8.
+        // The C field is char** (not const char**), so cast away outer const.
+        // Safe: js_AddStream / js_UpdateStream only read the subjects array.
+        c_cfg.Subjects = @ptrCast(@constCast(cfg.subjects.ptr));
         c_cfg.SubjectsLen = @intCast(cfg.subjects.len);
         c_cfg.MaxAge = cfg.max_age_ns;
         c_cfg.Retention = @intFromEnum(cfg.retention);
