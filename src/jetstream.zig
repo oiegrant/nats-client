@@ -155,10 +155,17 @@ pub const JetStream = opaque {
         return status.raise();
     }
 
+    /// Wait for all outstanding async JetStream publishes to be acknowledged
+    /// by the server.  Call this after a batch of `publishAsync` calls to
+    /// ensure at-least-once delivery before the program continues or exits.
+    pub fn publishAsyncComplete(self: *JetStream) Error!void {
+        const status = Status.fromInt(nats_c.js_PublishAsyncComplete(@ptrCast(self), null));
+        return status.raise();
+    }
+
     /// Asynchronous JetStream publish.  Enqueues the message for background
     /// acknowledgment.  Faster than `publish`, but requires the caller to
-    /// check for async errors separately (or accept at-most-once fire-and-
-    /// forget semantics for non-critical paths).
+    /// call `publishAsyncComplete` after the batch to guarantee delivery.
     pub fn publishAsync(
         self: *JetStream,
         subject: [:0]const u8,

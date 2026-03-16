@@ -692,7 +692,7 @@ pub const ConnectionOptions = opaque {
         comptime callback: *const ConnectionCallbackSignature(T),
         userdata: T,
     ) Error!void {
-        return Status.fromInt(nats_c.natsOptions_SetClosedCB(
+        return Status.fromInt(nats_c.natsOptions_SetDisconnectedCB(
             @ptrCast(self),
             makeConnectionCallbackThunk(T, callback),
             thunkhelper.opaqueFromUserdata(userdata),
@@ -705,7 +705,7 @@ pub const ConnectionOptions = opaque {
         comptime callback: *const ConnectionCallbackSignature(T),
         userdata: T,
     ) Error!void {
-        return Status.fromInt(nats_c.natsOptions_SetClosedCB(
+        return Status.fromInt(nats_c.natsOptions_SetReconnectedCB(
             @ptrCast(self),
             makeConnectionCallbackThunk(T, callback),
             thunkhelper.opaqueFromUserdata(userdata),
@@ -718,7 +718,7 @@ pub const ConnectionOptions = opaque {
         comptime callback: *const ConnectionCallbackSignature(T),
         userdata: T,
     ) Error!void {
-        return Status.fromInt(nats_c.natsOptions_SetClosedCB(
+        return Status.fromInt(nats_c.natsOptions_SetDiscoveredServersCB(
             @ptrCast(self),
             makeConnectionCallbackThunk(T, callback),
             thunkhelper.opaqueFromUserdata(userdata),
@@ -731,7 +731,7 @@ pub const ConnectionOptions = opaque {
         comptime callback: *const ConnectionCallbackSignature(T),
         userdata: T,
     ) Error!void {
-        return Status.fromInt(nats_c.natsOptions_SetClosedCB(
+        return Status.fromInt(nats_c.natsOptions_SetLameDuckModeCB(
             @ptrCast(self),
             makeConnectionCallbackThunk(T, callback),
             thunkhelper.opaqueFromUserdata(userdata),
