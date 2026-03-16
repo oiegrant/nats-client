@@ -23,12 +23,22 @@ pub fn build(b: *std.Build) void {
     const cflags: []const []const u8 = &.{};
 
     nats_lib.linkLibC();
+    // common_sources excludes glib_dispatch_pool.c — we compile a patched copy instead
     nats_lib.addCSourceFiles(.{
         .root = src_root,
         .files = common_sources,
         .flags = cflags,
     });
+    // Patched glib_dispatch_pool.c: guards memcpy(dst, NULL, 0) UB that crashes on GCC 15+
+    nats_lib.addCSourceFiles(.{
+        .root = b.path("patches"),
+        .files = &.{"glib_dispatch_pool.c"},
+        .flags = cflags,
+    });
     nats_lib.addIncludePath(nats_c_src.path("include"));
+    // glib internals need the upstream src/ and src/glib/ on the include path
+    nats_lib.addIncludePath(src_root);
+    nats_lib.addIncludePath(nats_c_src.path("src/glib"));
 
     const tinfo = target.result;
     if (tinfo.os.tag.isDarwin()) {
@@ -151,7 +161,7 @@ const common_sources: []const []const u8 = &.{
     "dispatch.c",
     "glib/glib.c",
     "glib/glib_async_cb.c",
-    "glib/glib_dispatch_pool.c",
+    // glib/glib_dispatch_pool.c — compiled from patches/ (GCC 15 null-ptr fix)
     "glib/glib_gc.c",
     "glib/glib_last_error.c",
     "glib/glib_ssl.c",

@@ -5,6 +5,7 @@
     .minimum_zig_version = "0.15.0",
     .paths = .{
         "src",
+        "patches",
         "build.zig",
         "build.zig.zon",
         "LICENSE",
