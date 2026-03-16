@@ -21,6 +21,7 @@ const con_ = @import("./connection.zig");
 const sub_ = @import("./subscription.zig");
 const msg_ = @import("./message.zig");
 const sta_ = @import("./statistics.zig");
+const js_ = @import("./jetstream.zig");
 
 pub const default_server_url = con_.default_server_url;
 pub const Connection = con_.Connection;
@@ -34,6 +35,12 @@ pub const Message = msg_.Message;
 
 pub const Statistics = sta_.Statistics;
 pub const StatsCounts = sta_.StatsCounts;
+
+pub const JetStream = js_.JetStream;
+pub const StreamConfig = js_.StreamConfig;
+pub const RetentionPolicy = js_.RetentionPolicy;
+pub const StorageType = js_.StorageType;
+pub const DiscardPolicy = js_.DiscardPolicy;
 
 pub const ErrorInfo = err_.ErrorInfo;
 pub const getLastError = err_.getLastError;
