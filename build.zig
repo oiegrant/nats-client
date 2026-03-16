@@ -6,34 +6,88 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const enable_libsodium = b.option(bool, "enable-libsodium", "Build with libsodium for higher-performance signing (default: true)") orelse true;
-    const enable_tls = b.option(bool, "enable-tls", "Build TLS support (default: true)") orelse true;
-    const tls_verify = b.option(bool, "force-host-verify", "Force hostname verification for TLS connections (default: true)") orelse true;
-    const enable_streaming = b.option(bool, "enable-streaming", "Build with streaming support (default: true)") orelse true;
+    // Fetch the raw nats.c C source
+    const nats_c_src = b.dependency("nats_c_src", .{});
+    const src_root = nats_c_src.path("src");
 
+    // Build nats.c static library using Zig 0.15 addLibrary API
+    const nats_lib = b.addLibrary(.{
+        .name = "nats",
+        .linkage = .static,
+        .root_module = b.createModule(.{
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+
+    const cflags: []const []const u8 = &.{};
+
+    nats_lib.linkLibC();
+    nats_lib.addCSourceFiles(.{
+        .root = src_root,
+        .files = common_sources,
+        .flags = cflags,
+    });
+    nats_lib.addIncludePath(nats_c_src.path("include"));
+
+    const tinfo = target.result;
+    if (tinfo.os.tag.isDarwin()) {
+        nats_lib.root_module.addCMacro("DARWIN", "");
+        nats_lib.addCSourceFiles(.{
+            .root = src_root,
+            .files = unix_sources,
+            .flags = cflags,
+        });
+    } else if (tinfo.os.tag == .windows) {
+        nats_lib.addCSourceFiles(.{
+            .root = src_root,
+            .files = win_sources,
+            .flags = cflags,
+        });
+        nats_lib.linkSystemLibrary("ws2_32");
+    } else {
+        nats_lib.root_module.addCMacro("_GNU_SOURCE", "");
+        nats_lib.root_module.addCMacro("LINUX", "");
+        nats_lib.addCSourceFiles(.{
+            .root = src_root,
+            .files = unix_sources,
+            .flags = cflags,
+        });
+        if (!tinfo.abi.isAndroid()) {
+            nats_lib.linkSystemLibrary("pthread");
+            nats_lib.linkSystemLibrary("rt");
+        }
+    }
+
+    nats_lib.root_module.addCMacro("_REENTRANT", "");
+    // NATS_HAS_STREAMING intentionally not defined — disables stan/protobuf-c dependency
+
+    for (install_headers) |header| {
+        nats_lib.installHeader(
+            nats_c_src.path(b.pathJoin(&.{ "src", header })),
+            b.pathJoin(&.{ "nats", header }),
+        );
+    }
+
+    b.installArtifact(nats_lib);
+
+    // Zig wrapper module
     const nats = b.addModule("nats", .{
         .root_source_file = b.path("src/nats.zig"),
     });
+    nats.linkLibrary(nats_lib);
 
-    const nats_c = b.dependency("nats_c", .{
-        .target = target,
-        .optimize = optimize,
-        .@"enable-libsodium" = enable_libsodium,
-        .@"enable-tls" = enable_tls,
-        .@"force-host-verify" = tls_verify,
-        .@"enable-streaming" = enable_streaming,
-    });
-    nats.linkLibrary(nats_c.artifact("nats"));
-
+    // Tests
     const tests = b.addTest(.{
         .name = "nats-zig-unit-tests",
-        .root_source_file = b.path("tests/main.zig"),
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tests/main.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
     });
-
     tests.root_module.addImport("nats", nats);
-    tests.linkLibrary(nats_c.artifact("nats"));
+    tests.linkLibrary(nats_lib);
 
     const run_main_tests = b.addRunArtifact(tests);
     const test_step = b.step("test", "Run tests");
@@ -70,9 +124,11 @@ pub fn add_examples(b: *std.Build, options: ExampleOptions) void {
     inline for (examples) |example| {
         const ex_exe = b.addExecutable(.{
             .name = example.name,
-            .root_source_file = b.path(example.file),
-            .target = options.target,
-            .optimize = .Debug,
+            .root_module = b.createModule(.{
+                .root_source_file = b.path(example.file),
+                .target = options.target,
+                .optimize = .Debug,
+            }),
         });
 
         ex_exe.root_module.addImport("nats", options.nats_module);
@@ -81,3 +137,59 @@ pub fn add_examples(b: *std.Build, options: ExampleOptions) void {
         example_step.dependOn(&install.step);
     }
 }
+
+const install_headers: []const []const u8 = &.{
+    "nats.h",
+    "status.h",
+    "version.h",
+};
+
+const common_sources: []const []const u8 = &.{
+    "asynccb.c",
+    "comsock.c",
+    "crypto.c",
+    "dispatch.c",
+    "glib/glib.c",
+    "glib/glib_async_cb.c",
+    "glib/glib_dispatch_pool.c",
+    "glib/glib_gc.c",
+    "glib/glib_last_error.c",
+    "glib/glib_ssl.c",
+    "glib/glib_timer.c",
+    "js.c",
+    "kv.c",
+    "nats.c",
+    "nkeys.c",
+    "opts.c",
+    "pub.c",
+    "stats.c",
+    "sub.c",
+    "url.c",
+    "buf.c",
+    "conn.c",
+    "hash.c",
+    "jsm.c",
+    "msg.c",
+    "natstime.c",
+    "nuid.c",
+    "parser.c",
+    "srvpool.c",
+    "status.c",
+    "timer.c",
+    "util.c",
+};
+
+const unix_sources: []const []const u8 = &.{
+    "unix/cond.c",
+    "unix/mutex.c",
+    "unix/sock.c",
+    "unix/thread.c",
+};
+
+const win_sources: []const []const u8 = &.{
+    "win/cond.c",
+    "win/mutex.c",
+    "win/sock.c",
+    "win/strings.c",
+    "win/thread.c",
+};

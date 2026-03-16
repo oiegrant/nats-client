@@ -2,7 +2,7 @@
     .name = .nats_client,
     .fingerprint = 0x7B8B5B9E2C2BD086,
     .version = "0.1.0",
-    .minimum_zig_version = "0.14.0",
+    .minimum_zig_version = "0.15.0",
     .paths = .{
         "src",
         "build.zig",
@@ -10,9 +10,9 @@
         "LICENSE",
     },
     .dependencies = .{
-        .nats_c = .{
-            .url = "git+https://github.com/allyourcodebase/nats.c.git?ref=3.9.3#81a546c524f7c3db16606b85b5d729b393d8667e",
-            .hash = "nats_c-3.9.3-0V8jnNdSAACkcRB0PdrHECfsTXSiySA6OeAOx1e83iaM",
+        .nats_c_src = .{
+            .url = "git+https://github.com/nats-io/nats.c?ref=v3.9.3#6367f6ef0de877bb4594aec2b100d04a164c42d3",
+            .hash = "N-V-__8AAPRJjQAqKJb6awqyb39SOQBreH5Yjup9hvDzJELq",
         },
     },
 }
