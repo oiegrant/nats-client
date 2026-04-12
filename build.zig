@@ -29,10 +29,11 @@ pub fn build(b: *std.Build) void {
         .files = common_sources,
         .flags = cflags,
     });
-    // Patched glib_dispatch_pool.c: guards memcpy(dst, NULL, 0) UB that crashes on GCC 15+
+    // Patched C files: guard memcpy(dst, NULL, 0) UB that crashes under
+    // Zig's safety-checked C compilation and GCC 15+.
     nats_lib.addCSourceFiles(.{
         .root = b.path("patches"),
-        .files = &.{"glib_dispatch_pool.c"},
+        .files = &.{ "glib_dispatch_pool.c", "msg.c" },
         .flags = cflags,
     });
     nats_lib.addIncludePath(nats_c_src.path("include"));
@@ -179,7 +180,7 @@ const common_sources: []const []const u8 = &.{
     "conn.c",
     "hash.c",
     "jsm.c",
-    "msg.c",
+    // msg.c — compiled from patches/ (null-ptr memcpy fix)
     "natstime.c",
     "nuid.c",
     "parser.c",
